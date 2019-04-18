@@ -17,18 +17,18 @@ bot.onText(/\/go/, (msg, match) => {
 
   const chatId = msg.chat.id;
 
-  const welcomeText = `Привет! Я Бот Мамин Креативщик, я умею играть в асоциации.\nНе знаешь как это?\nКороче: я присылаю тебе слово, а ты ответ присылаешь слово, которое первое пришло тебе в голову, затем я присылаю тебе то, что пришло в голову мне - и так пока кто то из нас не устанет (я не устану точно)`;
+  const welcomeText = `Мамин Креативщик начинает игру в ассоциации. Ты готов?`;
 
   bot.sendMessage(chatId, welcomeText, {
      reply_markup: {
       inline_keyboard: [
         [
           {
-            text: 'Понел',
+            text: 'Готов!',
             callback_data: 'yes'
           },
           {
-            text: 'Не понел',
+            text: 'Не',
             callback_data: 'no'
           }
         ]
