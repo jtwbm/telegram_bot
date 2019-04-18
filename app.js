@@ -7,67 +7,79 @@ const token = '823135240:AAH6VwxWwkbis_jVT1idWRGAnywfc8RyOXs'
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, { polling: true })
 
-// Matches "/echo [whatever]"
-bot.onText(/\/curse/, (msg, match) => {
-  // 'msg' is the received Message from Telegram
-  // 'match' is the result of executing the regexp above on the text content
-  // of the message
+let answers = {}; // здесь будут записываться ответы в формате chatID: [word, assication]
 
-  const chatId = msg.chat.id
-  // const resp = match[1] // the captured "whatever"
+let gameState = 0; // статус игры, 0 - игра не запущена, 1 - игра запущена
 
-  // send back the matched "whatever" to the chat
-  bot.sendMessage(chatId, 'Выберите валюту:', {
-  	reply_markup: {
-  		inline_keyboard: [
-  			[
-  				{
-  					text: '€ EUR',
-  					callback_data: 'EUR'
-  				},
-  				{
-  					text: '₽ RUR',
-  					callback_data: 'RUR'
-  				},
-  				{
-  					text: '$ USD',
-  					callback_data: 'USD'
-  				},
-  				{
-  					text: '₿ BTC',
-  					callback_data: 'BTC'
-  				}
-  			]
-  		]
-  	}
-  })
-})
+let wordIndex = 0;
+
+bot.onText(/\/go/, (msg, match) => {
+
+  const chatId = msg.chat.id;
+
+  const welcomeText = `Привет! Я Бот Мамин Креативщик, я умею играть в асоциации.\nНе знаешь как это?\nКороче: я присылаю тебе слово, а ты ответ присылаешь слово, которое первое пришло тебе в голову, затем я присылаю тебе то, что пришло в голову мне - и так пока кто то из нас не устанет (я не устану точно)`;
+
+  bot.sendMessage(chatId, welcomeText, {
+     reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: 'Понел',
+            callback_data: 'yes'
+          },
+          {
+            text: 'Не понел',
+            callback_data: 'no'
+          }
+        ]
+      ]
+    }
+  });
+});
+
+bot.onText(/\/stop/, (msg, match) => {
+
+  const chatId = msg.chat.id;
+
+  const byeText = gameState === 1 ? 'ок' : 'Игра и так не запущена, ты чего';
+
+  gameState = 0;
+
+  bot.sendMessage(chatId, byeText);
+});
 
 bot.on('callback_query', query => {
-  	const id = query.message.chat.id
-  	const currency = query.data
+    const id = query.message.chat.id
+    const iDo = query.data
+    const words = getWords();
 
-  	request('https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5', function (error, response, body) {
-  		const data = JSON.parse(body)
-  		const result = data.filter(item => item.ccy === currency)[0]
-  		const resultText = `
-			*${result.ccy} => ${result.base_ccy}:*
-
-			Покупка: _${result.buy}_
-			Продажа: _${result.sale}_
-  		`
-
-  		console.log(result)
-
-  		bot.sendMessage(id, resultText, { parse_mode: 'Markdown' })
-  })
+    if(iDo === 'yes') {
+      bot.sendMessage(id, 'Тогда погнали! Твое первое слово:')
+      bot.sendMessage(id, words[wordIndex])
+      gameState = 1;
+    } else {
+      bot.sendMessage(id, getRules(), { parse_mode: 'Markdown' });
+      gameState = 0;
+    }
 })
 
-// Listen for any kind of message. There are different kinds of
-// messages.
-// bot.on('message', (msg) => {
-//   const chatId = msg.chat.id
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
 
-//   // send a message to the chat acknowledging receipt of their message
-//   bot.sendMessage(chatId, 'Received your message')
-// })
+  if(gameState == 1 && msg.text != '/stop') {
+    answers[chatId] = [getWords()[wordIndex], msg.text];
+    ++wordIndex;
+    bot.sendMessage(chatId, getWords()[wordIndex])
+  }
+})
+
+function getWords() {
+  if(this.currentIndex === undefined) {
+    this.currentIndex = 0;
+  }
+  return ['год', 'человек', 'время', 'дело', 'жизнь', 'день', 'рука', 'работа'];
+}
+
+function getRules() {
+  return `*Ассоциация* - интеллектуальная игpа в  слова для двух команд по два человека. Поэтому сначала следует найти ещё троих хороших и умных людей и предложить им  сыграть  в ассоциацию. Если они  не  умеют, то читайте краткое описание правил. https://ma-vijaya.livejournal.com/207075.html`;
+}
